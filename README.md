@@ -20,7 +20,7 @@ end
 
 ## Usage
 
-The example module above defines multiple types and implements a single `gen/0` function which returns a JSON document containing the JSON schema.
+The example module below defines multiple types and implements a single `gen/0` function which returns a JSON document containing the JSON schema.
 
 ```elixir
 defmodule Superhero do
