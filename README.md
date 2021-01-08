@@ -4,6 +4,8 @@ Generates a JSON Schema from Elixir/Erlang type specs.
 
 Status: Usable (though incomplete and likely buggy)
 
+TODO: Add Tests
+
 
 ## Installation
 
