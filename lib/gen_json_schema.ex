@@ -147,14 +147,12 @@ defmodule GenJsonSchema do
 
     extra_props =
       case module_name do
-        JsonSchemaType ->
-          apply(JsonSchemaType, :t, [type_name, type_args])
+        GenJsonSchema.Type ->
+          apply(GenJsonSchema.Type, :t, [type_name, type_args])
 
         _ ->
           %{}
       end
-
-    IO.puts("#{module_name} #{type_name} #{inspect(type_args)}")
 
     {true, Map.merge(%{type: type}, extra_props), []}
   end
@@ -167,7 +165,7 @@ defmodule GenJsonSchema do
     {true, %{enum: [value]}, []}
   end
 
-  defp property_type({JsonSchemaType, type, _opts}), do: "#{type}"
+  defp property_type({GenJsonSchema.Type, type, _opts}), do: "#{type}"
   defp property_type({String, :t, []}), do: "string"
   defp property_type(:string), do: "string"
   defp property_type(:atom), do: "string"
@@ -178,7 +176,7 @@ defmodule GenJsonSchema do
   defp property_type(:range), do: "number"
 end
 
-defmodule JsonSchemaType do
+defmodule GenJsonSchema.Type do
   @moduledoc """
   Custom types for JsonSchema
   """
