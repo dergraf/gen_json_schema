@@ -1,5 +1,7 @@
 # gen_json_schema
 
+[![Hex.pm](https://img.shields.io/hexpm/v/gen_json_schema.svg)](https://hex.pm/packages/gen_json_schema)
+
 Generates a JSON Schema from Elixir/Erlang type specs.
 
 Status: Usable (though incomplete and likely buggy)
