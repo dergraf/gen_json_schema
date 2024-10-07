@@ -31,7 +31,8 @@ defmodule GenJsonSchema.Superhero do
           placeOfBirth: String.t(),
           firstAppearance: String.t(),
           publisher: :marvel | :dc,
-          alignment: :good | :bad
+          alignment: :good | :bad,
+          alive: boolean()
         }
 
   @type superhero :: %{

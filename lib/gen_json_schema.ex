@@ -202,6 +202,7 @@ defmodule GenJsonSchema do
   defp property_type(:list), do: "array"
   defp property_type(:nonempty_list), do: "array"
   defp property_type(:range), do: "number"
+  defp property_type(:boolean), do: "boolean"
   defp property_type(nil), do: "null"
 
   defp parse_typedoc(docstring) when is_binary(docstring) do
