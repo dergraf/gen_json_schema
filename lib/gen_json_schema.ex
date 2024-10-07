@@ -4,7 +4,22 @@ defmodule GenJsonSchema do
   """
 
   def gen(module, root) do
-    {:ok, types} = Code.Typespec.fetch_types(module)
+    {:ok, types} =
+      Code.Typespec.fetch_types(module)
+
+    {:docs_v1, _, :elixir, _, _moduledoc, _, module_doc} = Code.fetch_docs(module)
+
+    typedocs =
+      Enum.reduce(module_doc, %{}, fn
+        {{:type, type_name, 0}, _lno, [], %{"en" => docstring}, _}, acc ->
+          Map.put(acc, type_name, parse_typedoc(docstring))
+
+        {{:type, type_name, 0}, _lno, [], _, _}, acc ->
+          Map.put(acc, type_name, parse_typedoc(String.capitalize("#{type_name}")))
+
+        _, acc ->
+          acc
+      end)
 
     types =
       types
@@ -21,10 +36,14 @@ defmodule GenJsonSchema do
       |> List.flatten()
       |> Enum.uniq()
       |> Enum.map(fn user_type ->
+        typedoc = Map.get(typedocs, user_type, %{})
+
         {_, object, _} =
           types
           |> Map.fetch!(user_type)
           |> type()
+
+        object = Map.merge(object, typedoc)
 
         {user_type, object}
       end)
@@ -109,7 +128,7 @@ defmodule GenJsonSchema do
         {is_required, %{enum: properties}, user_types}
 
       false when num_properties > 1 ->
-        {is_required, %{anyOf: properties}, user_types}
+        {is_required, %{oneOf: properties}, user_types}
 
       _ ->
         [property] = properties
@@ -154,7 +173,16 @@ defmodule GenJsonSchema do
           %{}
       end
 
-    {true, Map.merge(%{type: type}, extra_props), []}
+    type =
+      case Map.pop(extra_props, :nullable) do
+        {true, extra_props} ->
+          %{oneOf: [Map.merge(%{type: type}, extra_props), %{type: "null"}]}
+
+        {_, extra_props} ->
+          Map.merge(%{type: type}, extra_props)
+      end
+
+    {true, type, []}
   end
 
   defp type({_val_type, _, nil}) do
@@ -174,6 +202,31 @@ defmodule GenJsonSchema do
   defp property_type(:list), do: "array"
   defp property_type(:nonempty_list), do: "array"
   defp property_type(:range), do: "number"
+  defp property_type(nil), do: "null"
+
+  defp parse_typedoc(docstring) when is_binary(docstring) do
+    case YamlElixir.read_from_string(docstring) do
+      {:ok, docs} when is_map(docs) ->
+        Map.filter(docs, fn {k, _v} ->
+          k in [
+            "title",
+            "description",
+            "default",
+            "examples",
+            "deprecated",
+            "minLength",
+            "maxLength"
+          ] or
+            String.starts_with?(k, "x-")
+        end)
+
+      {:ok, ^docstring} ->
+        %{"title" => docstring}
+
+      {:error, _} ->
+        %{"title" => docstring}
+    end
+  end
 end
 
 defmodule GenJsonSchema.Type do

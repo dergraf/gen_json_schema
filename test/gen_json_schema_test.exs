@@ -2,7 +2,7 @@ defmodule GenJsonSchemaTest do
   use ExUnit.Case
 
   test "greets the world" do
-    schema = GenJsonSchema.TestSpecs.gen()
+    schema = GenJsonSchema.Superhero.gen()
     IO.puts(schema)
   end
 end
