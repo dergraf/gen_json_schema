@@ -24,6 +24,7 @@ defmodule GenJsonSchema.Superhero do
           eyeColor: :green | :blue | :brown | :black | :white,
           hairColor: :no_hair | :white | :brown | :black | :blonde | :red
         }
+  @type alive :: boolean()
   @type biography :: %{
           fullName: String.t(),
           alterEgo: String.t(),
@@ -32,7 +33,8 @@ defmodule GenJsonSchema.Superhero do
           firstAppearance: String.t(),
           publisher: :marvel | :dc,
           alignment: :good | :bad,
-          alive: boolean()
+          alive: alive(),
+          status: :verified
         }
 
   @type superhero :: %{

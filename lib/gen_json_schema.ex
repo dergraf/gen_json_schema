@@ -21,15 +21,15 @@ defmodule GenJsonSchema do
           acc
       end)
 
-    types =
+    {objects, user_types} =
       types
-      |> Enum.map(fn {:type, {type_name, type_impl, _}} -> {type_name, type_impl} end)
-      |> Enum.into(%{})
+      |> Enum.reduce({%{}, []}, fn {:type, {type_name, type_impl, _}},
+                                   {object_acc, user_types_acc} ->
+        {_, object, user_types} = type(type_impl)
+        {Map.put(object_acc, type_name, object), [user_types | user_types_acc]}
+      end)
 
-    {_, object, user_types} =
-      types
-      |> Map.fetch!(root)
-      |> type()
+    object = Map.fetch!(objects, root)
 
     definitions =
       user_types
@@ -38,10 +38,8 @@ defmodule GenJsonSchema do
       |> Enum.map(fn user_type ->
         typedoc = Map.get(typedocs, user_type, %{})
 
-        {_, object, _} =
-          types
-          |> Map.fetch!(user_type)
-          |> type()
+        object =
+          Map.fetch!(objects, user_type)
 
         object = Map.merge(object, typedoc)
 
@@ -107,6 +105,7 @@ defmodule GenJsonSchema do
         property =
           case property do
             %{enum: [e]} -> e
+            %{const: c} -> c
             _ -> property
           end
 
@@ -189,8 +188,12 @@ defmodule GenJsonSchema do
     {false, nil, []}
   end
 
-  defp type({_val_type, _, value}) do
+  defp type({_val_type, _, value}) when is_boolean(value) or not is_atom(value) do
     {true, %{enum: [value]}, []}
+  end
+
+  defp type({_val_type, _, value}) when is_atom(value) do
+    {true, %{const: value}, []}
   end
 
   defp property_type({GenJsonSchema.Type, type, _opts}), do: "#{type}"
