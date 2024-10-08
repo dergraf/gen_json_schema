@@ -29,7 +29,8 @@ defmodule GenJsonSchema do
         {Map.put(object_acc, type_name, object), [user_types | user_types_acc]}
       end)
 
-    object = Map.fetch!(objects, root)
+    root_typedoc = Map.get(typedocs, root, %{})
+    root_object = Map.fetch!(objects, root) |> Map.merge(root_typedoc)
 
     definitions =
       user_types
@@ -47,7 +48,7 @@ defmodule GenJsonSchema do
       end)
       |> Enum.into(%{})
 
-    obj = Map.put(object, :definitions, definitions)
+    obj = Map.put(root_object, :definitions, definitions)
 
     obj
     |> Jason.encode!(pretty: true)
