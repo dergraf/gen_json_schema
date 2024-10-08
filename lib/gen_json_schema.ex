@@ -3,7 +3,7 @@ defmodule GenJsonSchema do
   Documentation for `GenJsonSchema`.
   """
 
-  def gen(module, root) do
+  def gen(module, root, opts \\ []) do
     {:ok, types} =
       Code.Typespec.fetch_types(module)
 
@@ -25,7 +25,7 @@ defmodule GenJsonSchema do
       types
       |> Enum.reduce({%{}, []}, fn {:type, {type_name, type_impl, _}},
                                    {object_acc, user_types_acc} ->
-        {_, object, user_types} = type(type_impl)
+        {_, object, user_types} = type(type_impl, opts)
         {Map.put(object_acc, type_name, object), [user_types | user_types_acc]}
       end)
 
@@ -54,11 +54,12 @@ defmodule GenJsonSchema do
     |> Jason.encode!(pretty: true)
   end
 
-  defp type({:type, _, :map, def_map_fields}) do
+  defp type({:type, _, :map, def_map_fields}, opts) do
     {properties, required, user_types} =
       Enum.reduce(def_map_fields, {%{}, [], []}, fn
         {:type, _, :map_field_exact, [{:atom, _, name}, type_info]}, {props, required, acc_us} ->
-          {is_required, property, user_type} = type(type_info)
+          {is_required, property, user_type} = type(type_info, opts)
+          name = format_property(name, opts)
 
           {Map.put(props, name, property),
            case is_required do
@@ -72,10 +73,10 @@ defmodule GenJsonSchema do
      user_types}
   end
 
-  defp type({:type, _, t, elements}) when t == :list or t == :nonempty_list do
+  defp type({:type, _, t, elements}, opts) when t == :list or t == :nonempty_list do
     {user_types, [property]} =
       Enum.reduce(elements, {[], []}, fn type_info, {acc_us, acc_l} ->
-        {_is_required, property, user_type} = type(type_info)
+        {_is_required, property, user_type} = type(type_info, opts)
 
         {[user_type | acc_us], [property | acc_l]}
       end)
@@ -98,10 +99,10 @@ defmodule GenJsonSchema do
     end
   end
 
-  defp type({:type, _, :union, unions}) do
+  defp type({:type, _, :union, unions}, opts) do
     {is_required, user_types, properties} =
       Enum.reduce(unions, {true, [], []}, fn type_info, {acc_req, acc_us, acc_l} ->
-        {_is_required, property, user_type} = type(type_info)
+        {_is_required, property, user_type} = type(type_info, opts)
 
         property =
           case property do
@@ -136,32 +137,32 @@ defmodule GenJsonSchema do
     end
   end
 
-  defp type({:type, _, :range, range}) do
+  defp type({:type, _, :range, range}, _opts) do
     [{:integer, _, min}, {:integer, _, max}] = range
     {true, %{type: property_type(:integer), minimum: min, maximum: max}, []}
   end
 
-  defp type({:type, _, :neg_integer, _type_args}) do
+  defp type({:type, _, :neg_integer, _type_args}, _opts) do
     {true, %{type: property_type(:integer), exclusiveMaximum: 0}, []}
   end
 
-  defp type({:type, _, :non_neg_integer, _type_args}) do
+  defp type({:type, _, :non_neg_integer, _type_args}, _opts) do
     {true, %{type: property_type(:integer), minimum: 0}, []}
   end
 
-  defp type({:type, _, :pos_integer, _type_args}) do
+  defp type({:type, _, :pos_integer, _type_args}, _opts) do
     {true, %{type: property_type(:integer), minimum: 1}, []}
   end
 
-  defp type({:type, _, type, _type_args}) do
+  defp type({:type, _, type, _type_args}, _opts) do
     {true, %{type: property_type(type)}, []}
   end
 
-  defp type({:user_type, _, type, _type_args}) do
+  defp type({:user_type, _, type, _type_args}, _opts) do
     {true, %{"$ref": "#/definitions/#{type}"}, [type]}
   end
 
-  defp type({:remote_type, _, [{:atom, _, module_name}, {:atom, _, type_name}, type_args]}) do
+  defp type({:remote_type, _, [{:atom, _, module_name}, {:atom, _, type_name}, type_args]}, _opts) do
     type = property_type({module_name, type_name, type_args})
 
     extra_props =
@@ -185,15 +186,15 @@ defmodule GenJsonSchema do
     {true, type, []}
   end
 
-  defp type({_val_type, _, nil}) do
+  defp type({_val_type, _, nil}, _opts) do
     {false, nil, []}
   end
 
-  defp type({_val_type, _, value}) when is_boolean(value) or not is_atom(value) do
+  defp type({_val_type, _, value}, _opts) when is_boolean(value) or not is_atom(value) do
     {true, %{enum: [value]}, []}
   end
 
-  defp type({_val_type, _, value}) when is_atom(value) do
+  defp type({_val_type, _, value}, _opts) when is_atom(value) do
     {true, %{const: value}, []}
   end
 
@@ -230,6 +231,16 @@ defmodule GenJsonSchema do
 
       {:error, _} ->
         %{"title" => docstring}
+    end
+  end
+
+  defp format_property(name, opts) when is_atom(name) do
+    case Keyword.get(opts, :case) do
+      nil ->
+        "#{name}"
+
+      recase_func ->
+        apply(Recase, recase_func, ["#{name}"])
     end
   end
 end

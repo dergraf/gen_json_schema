@@ -48,6 +48,6 @@ defmodule GenJsonSchema.Superhero do
         }
 
   def gen() do
-    GenJsonSchema.gen(__MODULE__, :superhero)
+    GenJsonSchema.gen(__MODULE__, :superhero, case: :to_kebab)
   end
 end
