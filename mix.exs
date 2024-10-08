@@ -29,7 +29,6 @@ defmodule GenJsonSchema.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:jason, "~> 1.2"},
       {:yaml_elixir, "~> 2.11"},
       {:recase, "~> 0.8"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}

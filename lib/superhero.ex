@@ -24,18 +24,25 @@ defmodule GenJsonSchema.Superhero do
           eyeColor: :green | :blue | :brown | :black | :white,
           hairColor: :no_hair | :white | :brown | :black | :blonde | :red
         }
-  @type alive :: boolean()
-  @type biography :: %{
-          fullName: String.t(),
-          alterEgo: String.t(),
-          aliases: [String.t()] | nil,
-          placeOfBirth: String.t(),
-          firstAppearance: String.t(),
-          publisher: :marvel | :dc,
-          alignment: :good | :bad,
-          alive: alive(),
-          status: :verified
-        }
+
+  defmodule Bio do
+    @type alive :: boolean()
+    @typedoc """
+    title: Superhero Biographies
+    description: "All you need to know about your Superhero"
+    """
+    @type t :: %{
+            fullName: String.t(),
+            alterEgo: String.t(),
+            aliases: [String.t()] | nil,
+            placeOfBirth: String.t(),
+            firstAppearance: String.t(),
+            publisher: :marvel | :dc,
+            alignment: :good | :bad,
+            alive: alive(),
+            status: :verified
+          }
+  end
 
   @type superhero :: %{
           id: non_neg_integer(),
@@ -43,8 +50,8 @@ defmodule GenJsonSchema.Superhero do
           slug: String.t(),
           powerstats: powerstats(),
           appearance: appearance(),
-          biography: biography(),
-          all: powerstats() | appearance() | biography()
+          biography: Bio.t(),
+          all: powerstats() | appearance() | Bio.t()
         }
 
   def gen() do

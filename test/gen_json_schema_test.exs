@@ -3,6 +3,6 @@ defmodule GenJsonSchemaTest do
 
   test "greets the world" do
     schema = GenJsonSchema.Superhero.gen()
-    IO.puts(schema)
+    IO.inspect(schema)
   end
 end

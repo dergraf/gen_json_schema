@@ -36,22 +36,24 @@ defmodule GenJsonSchema do
       user_types
       |> List.flatten()
       |> Enum.uniq()
-      |> Enum.map(fn user_type ->
-        typedoc = Map.get(typedocs, user_type, %{})
+      |> Enum.reduce(%{}, fn
+        {remote_user_type, remote_object}, acc_defs ->
+          {remote_definitions, remote_object} = Map.pop(remote_object, :definitions)
 
-        object =
-          Map.fetch!(objects, user_type)
+          Map.merge(acc_defs, remote_definitions)
+          |> Map.put(remote_user_type, remote_object)
 
-        object = Map.merge(object, typedoc)
+        user_type, acc_defs ->
+          typedoc = Map.get(typedocs, user_type, %{})
 
-        {user_type, object}
+          object =
+            Map.fetch!(objects, user_type)
+
+          object = Map.merge(object, typedoc)
+          Map.put(acc_defs, user_type, object)
       end)
-      |> Enum.into(%{})
 
-    obj = Map.put(root_object, :definitions, definitions)
-
-    obj
-    |> Jason.encode!(pretty: true)
+    Map.put(root_object, :definitions, definitions)
   end
 
   defp type({:type, _, :map, def_map_fields}, opts) do
@@ -162,17 +164,12 @@ defmodule GenJsonSchema do
     {true, %{"$ref": "#/definitions/#{type}"}, [type]}
   end
 
-  defp type({:remote_type, _, [{:atom, _, module_name}, {:atom, _, type_name}, type_args]}, _opts) do
-    type = property_type({module_name, type_name, type_args})
-
-    extra_props =
-      case module_name do
-        GenJsonSchema.Type ->
-          apply(GenJsonSchema.Type, :t, [type_name, type_args])
-
-        _ ->
-          %{}
-      end
+  defp type(
+         {:remote_type, _, [{:atom, _, GenJsonSchema.Type}, {:atom, _, type_name}, type_args]},
+         _opts
+       ) do
+    type = property_type({GenJsonSchema.Type, type_name, type_args})
+    extra_props = apply(GenJsonSchema.Type, :t, [type_name, type_args])
 
     type =
       case Map.pop(extra_props, :nullable) do
@@ -184,6 +181,18 @@ defmodule GenJsonSchema do
       end
 
     {true, type, []}
+  end
+
+  defp type({:remote_type, _, [{:atom, _, module_name}, {:atom, _, type_name}, type_args]}, opts) do
+    if module_name in [Enum, String] do
+      type = property_type({module_name, type_name, type_args})
+      {true, %{type: type}, []}
+    else
+      remote_type = GenJsonSchema.gen(module_name, type_name, opts)
+      type = "#{module_name}_#{type_name}"
+
+      {true, %{"$ref": "#/definitions/#{type}"}, [{type, remote_type}]}
+    end
   end
 
   defp type({_val_type, _, nil}, _opts) do
@@ -201,6 +210,8 @@ defmodule GenJsonSchema do
   defp property_type({GenJsonSchema.Type, type, _opts}), do: "#{type}"
   defp property_type({String, :t, []}), do: "string"
   defp property_type(:string), do: "string"
+  defp property_type(:nonempty_binary), do: "string"
+  defp property_type(:binary), do: "string"
   defp property_type(:atom), do: "string"
   defp property_type(:integer), do: "integer"
   defp property_type(:float), do: "number"
@@ -209,6 +220,7 @@ defmodule GenJsonSchema do
   defp property_type(:range), do: "number"
   defp property_type(:boolean), do: "boolean"
   defp property_type(nil), do: "null"
+  defp property_type({_module, _type, _opts}), do: "ref"
 
   defp parse_typedoc(docstring) when is_binary(docstring) do
     case YamlElixir.read_from_string(docstring) do
@@ -226,7 +238,7 @@ defmodule GenJsonSchema do
             String.starts_with?(k, "x-")
         end)
 
-      {:ok, ^docstring} ->
+      {:ok, docstring} ->
         %{"title" => docstring}
 
       {:error, _} ->
