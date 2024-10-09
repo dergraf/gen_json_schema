@@ -233,7 +233,8 @@ defmodule GenJsonSchema do
             "examples",
             "deprecated",
             "minLength",
-            "maxLength"
+            "maxLength",
+            "additionalProperties"
           ] or
             String.starts_with?(k, "x-")
         end)
