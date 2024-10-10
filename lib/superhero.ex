@@ -30,6 +30,7 @@ defmodule GenJsonSchema.Superhero do
     @typedoc """
     title: Superhero Biographies
     description: "All you need to know about your Superhero"
+    required: []
     """
     @type t :: %{
             fullName: String.t(),
@@ -45,6 +46,7 @@ defmodule GenJsonSchema.Superhero do
   end
 
   @type superhero :: %{
+          String.t() => appearance(),
           id: non_neg_integer(),
           name: String.t(),
           slug: String.t(),
