@@ -83,9 +83,15 @@ defmodule GenJsonSchema do
      %{
        "type" => "object",
        "properties" => properties,
-       "required" => required,
        "additionalProperties" => additional_properties
-     }, user_types}
+     }
+     |> Map.merge(
+       if required == [] do
+         %{}
+       else
+         %{"required" => required}
+       end
+     ), user_types}
   end
 
   defp type({:type, _, t, elements}, opts) when t == :list or t == :nonempty_list do
