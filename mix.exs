@@ -30,6 +30,7 @@ defmodule GenJsonSchema.MixProject do
   defp deps do
     [
       {:yaml_elixir, "~> 2.11"},
+      {:jason, "~> 1.4"},
       {:recase, "~> 0.8"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
       # {:dep_from_hexpm, "~> 0.3.0"},

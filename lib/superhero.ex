@@ -1,16 +1,6 @@
 defmodule GenJsonSchema.Superhero do
   @moduledoc false
 
-  @typedoc "This is the Powerstats type"
-  @type powerstats :: %{
-          intelligence: 0..100,
-          strength: 0..100,
-          speed: 0..100,
-          durability: 0..100,
-          power: 0..100,
-          combat: 0..100
-        }
-
   @typedoc """
         name: Appearance
         title: This is the appearance
@@ -23,6 +13,15 @@ defmodule GenJsonSchema.Superhero do
           weight: GenJsonSchema.Type.integer(minimum: 1, maximum: 250),
           eyeColor: :green | :blue | :brown | :black | :white,
           hairColor: :no_hair | :white | :brown | :black | :blonde | :red
+        }
+  @typedoc "This is the Powerstats type"
+  @type powerstats :: %{
+          intelligence: 0..100,
+          strength: 0..100,
+          speed: 0..100,
+          durability: 0..100,
+          power: 0..100,
+          combat: 0..100
         }
 
   defmodule Bio do
@@ -58,5 +57,7 @@ defmodule GenJsonSchema.Superhero do
 
   def gen() do
     GenJsonSchema.gen(__MODULE__, :superhero, case: :to_kebab)
+    |> IO.inspect()
+    |> Jason.encode!()
   end
 end

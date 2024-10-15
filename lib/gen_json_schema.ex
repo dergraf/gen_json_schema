@@ -23,42 +23,55 @@ defmodule GenJsonSchema do
 
     {objects, user_types} =
       types
-      |> Enum.reduce({%{}, []}, fn {:type, {type_name, type_impl, _}},
-                                   {object_acc, user_types_acc} ->
+      |> Enum.sort_by(fn
+        {:type, {_type_name, {:type, 0, _, [{:user_type, {lno, _}, _user_type_name, []}]}, []}} ->
+          lno
+
+        {:type, {_type_name, {:remote_type, {lno, _}, _}, _}} ->
+          lno
+
+        {:type, {_type_name, {:type, {lno, _}, _, _}, _}} ->
+          lno
+
+        _ ->
+          :push_to_end
+      end)
+      |> Enum.reduce({[], []}, fn {:type, {type_name, type_impl, _}},
+                                  {object_acc, user_types_acc} ->
         {_, object, user_types} = type(type_impl, opts)
-        {Map.put(object_acc, type_name, object), [user_types | user_types_acc]}
+        {[{type_name, object} | object_acc], [user_types | user_types_acc]}
       end)
 
     root_typedoc = Map.get(typedocs, root, %{})
-    root_object = Map.fetch!(objects, root) |> Map.merge(root_typedoc)
+    root_object = Keyword.fetch!(objects, root) |> Map.merge(root_typedoc)
 
     definitions =
       user_types
       |> List.flatten()
       |> Enum.uniq()
-      |> Enum.reduce(%{}, fn
+      |> Enum.reduce([], fn
         {remote_user_type, remote_object}, acc_defs ->
-          {remote_definitions, remote_object} = Map.pop(remote_object, :definitions)
+          {%Jason.OrderedObject{values: remote_definitions}, remote_object} =
+            Map.pop(remote_object, :definitions)
 
-          Map.merge(acc_defs, remote_definitions)
-          |> Map.put(remote_user_type, remote_object)
+          [[{remote_user_type, remote_object} | remote_definitions] | acc_defs]
 
         user_type, acc_defs ->
           typedoc = Map.get(typedocs, user_type, %{})
 
           object =
-            Map.fetch!(objects, user_type)
+            Keyword.fetch!(objects, user_type)
 
           object = Map.merge(object, typedoc)
-          Map.put(acc_defs, user_type, object)
+          [{user_type, object} | acc_defs]
       end)
 
-    Map.put(root_object, :definitions, definitions)
+    Map.put(root_object, :definitions, Jason.OrderedObject.new(List.flatten(definitions)))
   end
 
   defp type({:type, _, :map, def_map_fields}, opts) do
     {properties, required, user_types, additional_properties} =
-      Enum.reduce(def_map_fields, {%{}, [], [], false}, fn
+      Enum.reduce(def_map_fields, {[], [], [], false}, fn
         # additional_properties configured in object
         {:type, _, :map_field_exact,
          [{:remote_type, _, [{:atom, 0, String}, {:atom, _, :t}, []]}, type_info]},
@@ -72,7 +85,7 @@ defmodule GenJsonSchema do
           {is_required, property, user_type} = type(type_info, opts)
           name = format_property(name, opts)
 
-          {Map.put(props, name, property),
+          {[{name, property} | props],
            case is_required do
              true -> [name | required]
              false -> required
@@ -82,7 +95,7 @@ defmodule GenJsonSchema do
     {true,
      %{
        "type" => "object",
-       "properties" => properties,
+       "properties" => Jason.OrderedObject.new(Enum.reverse(properties)),
        "additionalProperties" => additional_properties
      }
      |> Map.merge(
