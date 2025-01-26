@@ -96,7 +96,7 @@ defmodule GenJsonSchema do
      %{
        "type" => "object",
        "properties" => Jason.OrderedObject.new(Enum.reverse(properties)),
-       "additionalProperties" => additional_properties
+       "additionalProperties" => additional_properties != false
      }
      |> Map.merge(
        if required == [] do
@@ -142,7 +142,7 @@ defmodule GenJsonSchema do
           case property do
             %{"enum" => [e]} -> e
             %{"const" => c} -> c
-            _ -> property
+            _ -> property |> IO.inspect()
           end
 
         {acc_req, acc_l, acc_us} =
